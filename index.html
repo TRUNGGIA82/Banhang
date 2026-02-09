@@ -10,10 +10,9 @@
 <script src="https://unpkg.com/lucide@latest"></script>
 
 <style>
-
 :root{
 --primary:#1976d2;
---bg:#f5f7fa;
+--bg:#f4f6f8;
 --card:#ffffff;
 --text:#1f2937;
 --muted:#6b7280;
@@ -21,8 +20,8 @@
 }
 
 body{
-font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
 margin:0;
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
 background:var(--bg);
 color:var(--text);
 }
@@ -35,17 +34,13 @@ padding:14px;
 text-align:center;
 font-weight:600;
 font-size:17px;
-box-shadow:0 2px 4px rgba(0,0,0,0.1);
 }
 
-/* CONTENT */
-.container{
-padding:16px;
-margin-bottom:90px;
-}
+/* VIEW */
+.view{ padding:16px; padding-bottom:90px; }
 
 /* INPUT */
-input, select, textarea{
+input,select{
 width:100%;
 padding:12px;
 border-radius:8px;
@@ -63,40 +58,37 @@ border:none;
 background:var(--primary);
 color:white;
 font-weight:500;
-cursor:pointer;
 }
 
 /* CARD */
 .card{
 background:var(--card);
-padding:16px;
 border-radius:12px;
-margin-bottom:14px;
+padding:14px;
+margin-bottom:12px;
 border:1px solid var(--border);
-box-shadow:0 2px 8px rgba(0,0,0,0.04);
 }
 
 .price{
 font-size:22px;
 font-weight:700;
 color:var(--primary);
-margin:6px 0;
 }
 
 .price-si{
-font-size:15px;
+font-size:14px;
 color:#2563eb;
 font-weight:600;
-margin-bottom:6px;
+margin-top:4px;
 }
 
 .meta{
 font-size:14px;
 color:var(--muted);
-margin-top:3px;
+margin-top:4px;
 }
 
-/* BOTTOM NAV */
+/* NAV */
 .nav{
 position:fixed;
 bottom:0;
@@ -112,279 +104,220 @@ text-align:center;
 padding:8px 0;
 font-size:12px;
 color:var(--muted);
-cursor:pointer;
 }
 
 .nav-item svg{
 width:20px;
 height:20px;
-display:block;
-margin:0 auto 4px auto;
+margin-bottom:4px;
 }
 
-.nav-item.active{
-color:var(--primary);
+.nav-item.active{ color:var(--primary); font-weight:600; }
+
+/* MODAL */
+.modal{
+position:fixed;
+top:0;left:0;right:0;bottom:0;
+background:rgba(0,0,0,0.4);
+display:none;
+align-items:center;
+justify-content:center;
+}
+
+.modal-box{
+background:white;
+width:92%;
+max-width:420px;
+border-radius:12px;
+padding:16px;
+}
+
+.modal-header{
 font-weight:600;
+margin-bottom:10px;
+display:flex;
+justify-content:space-between;
 }
 
-.hidden{ display:none; }
-
-#reader{ margin-top:10px; }
-/* ===== CAMERA STYLE - CHUYÊN NGHIỆP HƠN ===== */
-
-#reader{
-    margin-top:15px;
-    background:#000;
-    padding:12px;
-    border-radius:16px;
-    box-shadow:0 8px 20px rgba(0,0,0,0.35);
-}
-
-#reader video{
-    width:100%;
-    border-radius:12px;
-}
-
-/* Khung quét rõ nét hơn */
-#reader::after{
-    content:"Đưa mã vạch vào khung";
-    position:absolute;
-    bottom:18px;
-    left:50%;
-    transform:translateX(-50%);
-    color:#fff;
-    font-size:14px;
-    background:rgba(0,0,0,0.6);
-    padding:6px 12px;
-    border-radius:20px;
-}
-
-/* Viền khung quét */
-#reader canvas{
-    border-radius:12px;
-}
-
+.hidden{display:none}
 </style>
 </head>
+
 <body>
 
 <div class="header">Quản Lý Giá Hàng</div>
 
-<!-- TRA CỨU -->
-<div id="view-search" class="container">
-<input type="text" id="searchInput" placeholder="Tìm tên / mã / barcode">
-<button onclick="startScanner()">📷 Quét Barcode</button>
+<!-- ===== TRA CỨU ===== -->
+<div id="view-search" class="view">
+<input id="searchInput" placeholder="Tìm mã / tên / barcode">
+<button onclick="startScan()">📷 Quét barcode</button>
 <div id="reader" class="hidden"></div>
 <div id="result"></div>
 </div>
 
-<!-- DANH SÁCH -->
-<div id="view-products" class="container hidden">
-<h3>Danh sách sản phẩm</h3>
+<!-- ===== SẢN PHẨM ===== -->
+<div id="view-products" class="view hidden">
+<button onclick="openModal()">➕ Tạo sản phẩm</button>
 <div id="productList"></div>
 </div>
 
-<!-- IMPORT -->
-<div id="view-import" class="container hidden">
-<h3>Import Copy - Dán</h3>
-<textarea id="importData" placeholder="ma,ten,barcode,gia_nhap,gia_ban,gia_si,ton"></textarea>
-<button onclick="importManual()">Import thủ công</button>
+<!-- ===== NHẬP HÀNG ===== -->
+<div id="view-nhap" class="view hidden">
+<h3>Phiếu nhập hàng</h3>
+
+<select id="nhapSelect"></select>
+<input id="nhapSL" type="number" placeholder="Số lượng nhập">
+
+<button onclick="nhapHang()">Thêm vào phiếu</button>
+
+<div id="phieu"></div>
 
 <hr>
-
-<h3>Import File KiotViet (.xlsx)</h3>
-<input type="file" id="fileInput" accept=".xlsx,.xls">
-<button onclick="handleFile()">Import từ KiotViet</button>
+<b>Tổng tiền:</b> <span id="tongTien">0</span> đ
+<button onclick="hoanThanhNhap()">Hoàn thành nhập</button>
 </div>
 
-<!-- NHẬP -->
-<div id="view-nhap" class="container hidden">
-<h3>Nhập hàng</h3>
-<select id="nhapProduct"></select>
-<input type="number" id="nhapSoLuong" placeholder="Số lượng nhập">
-<button onclick="nhapHang()">Cập nhật tồn kho</button>
+<!-- ===== IMPORT ===== -->
+<div id="view-import" class="view hidden">
+<input type="file" id="fileInput">
+<button onclick="importExcel()">Import từ KiotViet</button>
 </div>
 
-<!-- BOTTOM NAV -->
+<!-- ===== MODAL TẠO SP ===== -->
+<div class="modal" id="modal">
+<div class="modal-box">
+<div class="modal-header">
+<span>Tạo sản phẩm</span>
+<span onclick="closeModal()">✕</span>
+</div>
+
+<input id="mMa" placeholder="Mã sản phẩm">
+<input id="mTen" placeholder="Tên sản phẩm">
+<input id="mGiaNhap" type="number" placeholder="Giá nhập">
+<input id="mGiaBan" type="number" placeholder="Giá bán">
+<input id="mGiaSi" type="number" placeholder="Giá sỉ">
+<input id="mTon" type="number" placeholder="Tồn ban đầu">
+
+<button onclick="saveProduct()">Lưu</button>
+</div>
+</div>
+
+<!-- ===== NAV ===== -->
 <div class="nav">
-<div class="nav-item active" onclick="showView('search',this)">
-<i data-lucide="search"></i>
-Tra cứu
-</div>
-<div class="nav-item" onclick="showView('products',this)">
-<i data-lucide="box"></i>
-Sản phẩm
-</div>
-<div class="nav-item" onclick="showView('import',this)">
-<i data-lucide="upload"></i>
-Import
-</div>
-<div class="nav-item" onclick="showView('nhap',this)">
-<i data-lucide="plus-circle"></i>
-Nhập
-</div>
+<div class="nav-item active" onclick="show('search',this)"><i data-lucide="search"></i>Tra cứu</div>
+<div class="nav-item" onclick="show('products',this)"><i data-lucide="box"></i>Sản phẩm</div>
+<div class="nav-item" onclick="show('nhap',this)"><i data-lucide="download"></i>Nhập</div>
+<div class="nav-item" onclick="show('import',this)"><i data-lucide="upload"></i>Import</div>
 </div>
 
 <script>
-
 lucide.createIcons();
 
-let products = JSON.parse(localStorage.getItem("products")) || [];
+let products=JSON.parse(localStorage.getItem("products"))||[];
+let phieu=[];
 
-function saveData(){
-localStorage.setItem("products", JSON.stringify(products));
-}
-
-function showView(view,el){
-document.querySelectorAll(".container").forEach(v=>v.classList.add("hidden"));
-document.getElementById("view-"+view).classList.remove("hidden");
-
-document.querySelectorAll(".nav-item").forEach(i=>i.classList.remove("active"));
-if(el) el.classList.add("active");
-
-renderProducts();
-renderSelect();
+/* NAV */
+function show(v,el){
+document.querySelectorAll('.view').forEach(x=>x.classList.add('hidden'));
+document.getElementById('view-'+v).classList.remove('hidden');
+document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
+el.classList.add('active');
+render();
 }
 
 /* SEARCH */
-document.getElementById("searchInput").addEventListener("input",function(){
-searchProduct(this.value);
-});
-
-function searchProduct(keyword){
-const key=keyword.toLowerCase();
-const result=document.getElementById("result");
-result.innerHTML="";
-
-products
-.filter(p=>p.ma.toLowerCase().includes(key)||
-p.ten.toLowerCase().includes(key)||
-(p.barcode&&p.barcode.includes(key)))
-.forEach(p=>{
+searchInput.oninput=()=>renderSearch();
+function renderSearch(){
+result.innerHTML='';
+products.filter(p=>
+p.ma.includes(searchInput.value)||p.ten.includes(searchInput.value)
+).forEach(p=>{
 result.innerHTML+=`
 <div class="card">
 <b>${p.ten}</b>
-<div class="meta">Mã: ${p.ma}</div>
-
-<div class="price">${p.gia_ban.toLocaleString()} đ</div>
-<div class="price-si">Giá sỉ: ${(p.gia_si||p.gia_ban).toLocaleString()} đ</div>
-
-<div class="meta">Giá nhập: ${p.gia_nhap.toLocaleString()} đ</div>
-<div class="meta">Tồn kho: ${p.ton}</div>
-</div>`;
-});
-}
-
-/* LIST */
-function renderProducts(){
-const list=document.getElementById("productList");
-list.innerHTML="";
-products.forEach(p=>{
-list.innerHTML+=`
-<div class="card">
-<b>${p.ten} (${p.ma})</b>
-<div class="price">${p.gia_ban.toLocaleString()} đ</div>
-<div class="price-si">Giá sỉ: ${(p.gia_si||p.gia_ban).toLocaleString()} đ</div>
-<div class="meta">Giá nhập: ${p.gia_nhap.toLocaleString()} đ</div>
+<div class="price">${p.gia_ban} đ</div>
+<div class="price-si">Giá sỉ: ${p.gia_si} đ</div>
 <div class="meta">Tồn: ${p.ton}</div>
 </div>`;
 });
 }
 
-function renderSelect(){
-const select=document.getElementById("nhapProduct");
-select.innerHTML="";
+/* PRODUCTS */
+function render(){
+productList.innerHTML='';
+nhapSelect.innerHTML='';
 products.forEach((p,i)=>{
-select.innerHTML+=`<option value="${i}">${p.ten}</option>`;
+productList.innerHTML+=`<div class="card">${p.ten} (${p.ma})</div>`;
+nhapSelect.innerHTML+=`<option value="${i}">${p.ten}</option>`;
 });
 }
 
-/* IMPORT MANUAL */
-function importManual(){
-const data=document.getElementById("importData").value.trim();
-if(!data) return;
-data.split("\n").forEach(line=>{
-let [ma,ten,barcode,gia_nhap,gia_ban,gia_si,ton]=line.split(",");
-if(!ma) return;
+/* MODAL */
+function openModal(){modal.style.display='flex'}
+function closeModal(){modal.style.display='none'}
+function saveProduct(){
 products.push({
-ma,ten,barcode,
-gia_nhap:Number(gia_nhap),
-gia_ban:Number(gia_ban),
-gia_si:Number(gia_si)||Number(gia_ban),
-ton:Number(ton)
+ma:mMa.value,ten:mTen.value,
+gia_nhap:+mGiaNhap.value,
+gia_ban:+mGiaBan.value,
+gia_si:+mGiaSi.value||+mGiaBan.value,
+ton:+mTon.value||0
 });
-});
-saveData();
-alert("Import thủ công thành công!");
-}
-
-/* IMPORT KIOTVIET */
-function handleFile(){
-const file=document.getElementById('fileInput').files[0];
-if(!file){ alert("Chọn file trước!"); return; }
-const reader=new FileReader();
-reader.onload=function(e){
-const data=new Uint8Array(e.target.result);
-const workbook=XLSX.read(data,{type:'array'});
-const sheet=workbook.Sheets[workbook.SheetNames[0]];
-const json=XLSX.utils.sheet_to_json(sheet);
-json.forEach(item=>{
-let ma=item["Mã hàng"]||item["Mã sản phẩm"];
-if(!ma) return;
-products.push({
-ma,
-ten:item["Tên hàng"]||"",
-barcode:item["Mã vạch"]||"",
-gia_nhap:Number(item["Giá vốn"]||0),
-gia_ban:Number(item["Giá bán"]||0),
-gia_si:Number(item["Giá sỉ"]||item["Giá bán"]||0),
-ton:Number(item["Tồn kho"]||0)
-});
-});
-saveData();
-alert("Import KiotViet thành công!");
-};
-reader.readAsArrayBuffer(file);
+localStorage.setItem("products",JSON.stringify(products));
+closeModal();render();
 }
 
 /* NHẬP */
 function nhapHang(){
-const index=document.getElementById("nhapProduct").value;
-const sl=Number(document.getElementById("nhapSoLuong").value);
-if(!sl) return;
-products[index].ton+=sl;
-saveData();
-alert("Đã cập nhật tồn kho!");
+let p=products[nhapSelect.value];
+let sl=+nhapSL.value;
+phieu.push({...p,sl});
+renderPhieu();
+}
+function renderPhieu(){
+phieu.innerHTML='';
+let tong=0;
+phieu.forEach(p=>{
+let tt=p.sl*p.gia_nhap;
+tong+=tt;
+phieu.innerHTML+=`<div>${p.ten} x ${p.sl} = ${tt}</div>`;
+});
+tongTien.innerText=tong;
+}
+function hoanThanhNhap(){
+phieu.forEach(p=>{
+let sp=products.find(x=>x.ma==p.ma);
+sp.ton+=p.sl;
+});
+phieu=[];
+localStorage.setItem("products",JSON.stringify(products));
+render();
+alert("Đã nhập hàng");
 }
 
-/* BARCODE */
-let html5QrCode;
-function startScanner(){
-
-document.getElementById("reader").classList.remove("hidden");
-
-html5QrCode = new Html5Qrcode("reader");
-
-html5QrCode.start(
-{ facingMode: "environment" },
-{
-fps: 10,
-qrbox: { width: 250, height: 250 }
-},
-(decodedText) => {
-document.getElementById("searchInput").value = decodedText;
-searchProduct(decodedText);
-stopScanner();
+/* IMPORT */
+function importExcel(){
+const f=fileInput.files[0];
+const r=new FileReader();
+r.onload=e=>{
+const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+const js=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+js.forEach(i=>{
+products.push({
+ma:i["Mã hàng"],
+ten:i["Tên hàng"],
+gia_nhap:i["Giá vốn"],
+gia_ban:i["Giá bán"],
+gia_si:i["Giá bán"],
+ton:i["Tồn kho"]
+});
+});
+localStorage.setItem("products",JSON.stringify(products));
+render();
+alert("Import xong");
+};
+r.readAsArrayBuffer(f);
 }
-);
-
-}
-
-
-renderProducts();
-renderSelect();
-
 </script>
-
 </body>
 </html>
