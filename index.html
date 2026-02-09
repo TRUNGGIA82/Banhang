@@ -4,13 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Quản Lý Giá Hàng</title>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
 <style>
 body { font-family: Arial; margin:0; background:#f2f2f2; }
 .header { background:#2f80ed; color:white; padding:15px; text-align:center; font-weight:bold; }
-.container { padding:15px; margin-bottom:70px; }
-input, select, button {
+.container { padding:15px; margin-bottom:80px; }
+input, select, button, textarea {
     width:100%; padding:10px; margin:5px 0;
     border-radius:8px; border:1px solid #ccc;
+    font-size:16px;
 }
 button { background:#2f80ed; color:white; border:none; }
 .card {
@@ -25,11 +29,10 @@ button { background:#2f80ed; color:white; border:none; }
     position:fixed; bottom:0; width:100%;
     display:flex; background:white; border-top:1px solid #ccc;
 }
-.nav button {
-    flex:1; padding:10px; background:white; color:#333;
-}
+.nav button { flex:1; padding:10px; background:white; color:#333; }
 .hidden { display:none; }
-textarea { width:100%; height:120px; }
+textarea { height:120px; }
+#reader { margin-top:10px; }
 </style>
 </head>
 <body>
@@ -37,7 +40,9 @@ textarea { width:100%; height:120px; }
 <div class="header">Quản Lý Giá Hàng</div>
 
 <div id="view-search" class="container">
-    <input type="text" id="searchInput" placeholder="Tìm tên / mã sản phẩm">
+    <input type="text" id="searchInput" placeholder="Tìm tên / mã / barcode">
+    <button onclick="startScanner()">📷 Quét Barcode</button>
+    <div id="reader" class="hidden"></div>
     <div id="result"></div>
 </div>
 
@@ -48,7 +53,7 @@ textarea { width:100%; height:120px; }
 
 <div id="view-import" class="container hidden">
     <h3>Import (Copy - Dán)</h3>
-    <p>Định dạng: ma,ten,gia_le,gia_si,ton</p>
+    <p>Định dạng: ma,ten,barcode,gia_le,gia_si,ton</p>
     <textarea id="importData"></textarea>
     <button onclick="importProducts()">Import</button>
 </div>
@@ -68,11 +73,16 @@ textarea { width:100%; height:120px; }
 </div>
 
 <script>
-let products = [
-{ma:"SP001", ten:"Sữa Vinamilk 1L", gia_le:22000, gia_si:20000, ton:120},
-{ma:"SP002", ten:"Sữa Vinamilk 180ml", gia_le:7000, gia_si:6500, ton:8},
-{ma:"SP003", ten:"Coca 330ml", gia_le:10000, gia_si:9000, ton:0}
+
+let products = JSON.parse(localStorage.getItem("products")) || [
+{ma:"SP001", ten:"Sữa Vinamilk 1L", barcode:"8938505974198", gia_le:22000, gia_si:20000, ton:120},
+{ma:"SP002", ten:"Sữa Vinamilk 180ml", barcode:"8938505974181", gia_le:7000, gia_si:6500, ton:8},
+{ma:"SP003", ten:"Coca 330ml", barcode:"8934588590302", gia_le:10000, gia_si:9000, ton:0}
 ];
+
+function saveData(){
+localStorage.setItem("products", JSON.stringify(products));
+}
 
 function showView(view){
 document.querySelectorAll(".container").forEach(v=>v.classList.add("hidden"));
@@ -91,6 +101,7 @@ else if(p.ton<10) stockClass="stock-low";
 list.innerHTML+=`
 <div class="card">
 <b>${p.ten} (${p.ma})</b>
+<div>Barcode: ${p.barcode}</div>
 <div class="price-le">${p.gia_le.toLocaleString()}đ</div>
 <div class="price-si">Giá sỉ: ${p.gia_si.toLocaleString()}đ</div>
 <div class="${stockClass}">Tồn: ${p.ton}</div>
@@ -107,10 +118,14 @@ select.innerHTML+=`<option value="${i}">${p.ten}</option>`;
 }
 
 document.getElementById("searchInput").addEventListener("input",function(){
-const key=this.value.toLowerCase();
+searchProduct(this.value);
+});
+
+function searchProduct(keyword){
+const key=keyword.toLowerCase();
 const result=document.getElementById("result");
 result.innerHTML="";
-products.filter(p=>p.ten.toLowerCase().includes(key)||p.ma.toLowerCase().includes(key))
+products.filter(p=>p.ten.toLowerCase().includes(key)||p.ma.toLowerCase().includes(key)||p.barcode.includes(key))
 .forEach(p=>{
 result.innerHTML+=`
 <div class="card">
@@ -120,29 +135,26 @@ result.innerHTML+=`
 <div>Tồn: ${p.ton}</div>
 </div>`;
 });
-});
+}
 
 function importProducts(){
 const data=document.getElementById("importData").value.trim();
 if(!data) return;
 const lines=data.split("\n");
 lines.forEach(line=>{
-let [ma,ten,gia_le,gia_si,ton]=line.split(",");
+let [ma,ten,barcode,gia_le,gia_si,ton]=line.split(",");
 let existing=products.find(p=>p.ma==ma);
 if(existing){
 existing.ten=ten;
+existing.barcode=barcode;
 existing.gia_le=Number(gia_le);
 existing.gia_si=Number(gia_si);
 existing.ton=Number(ton);
 }else{
-products.push({
-ma,ten,
-gia_le:Number(gia_le),
-gia_si:Number(gia_si),
-ton:Number(ton)
-});
+products.push({ma,ten,barcode,gia_le:Number(gia_le),gia_si:Number(gia_si),ton:Number(ton)});
 }
 });
+saveData();
 alert("Import thành công!");
 renderProducts();
 renderSelect();
@@ -153,12 +165,39 @@ const index=document.getElementById("nhapProduct").value;
 const sl=Number(document.getElementById("nhapSoLuong").value);
 if(!sl) return;
 products[index].ton+=sl;
+saveData();
 alert("Đã cập nhật tồn kho!");
 renderProducts();
 }
 
+let html5QrCode;
+
+function startScanner(){
+document.getElementById("reader").classList.remove("hidden");
+html5QrCode = new Html5Qrcode("reader");
+Html5Qrcode.getCameras().then(devices=>{
+if(devices && devices.length){
+html5QrCode.start(devices[0].id,{fps:10,qrbox:250},
+(decodedText)=>{
+document.getElementById("searchInput").value=decodedText;
+searchProduct(decodedText);
+stopScanner();
+});
+}
+});
+}
+
+function stopScanner(){
+if(html5QrCode){
+html5QrCode.stop().then(()=>{
+document.getElementById("reader").classList.add("hidden");
+});
+}
+}
+
 renderProducts();
 renderSelect();
+
 </script>
 
 </body>
