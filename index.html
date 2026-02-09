@@ -5,50 +5,39 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Quản Lý Giá Hàng</title>
 
-<!-- Thư viện đọc Excel -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
 body { font-family: Arial; margin:0; background:#f2f2f2; }
 .header { background:#2f80ed; color:white; padding:15px; text-align:center; font-weight:bold; }
-.container { padding:15px; margin-bottom:80px; }
+.container { padding:15px; margin-bottom:90px; }
 
 input, select, button, textarea {
-    width:100%;
-    padding:10px;
-    margin:5px 0;
-    border-radius:8px;
-    border:1px solid #ccc;
-    font-size:16px;
+width:100%; padding:10px; margin:5px 0;
+border-radius:8px; border:1px solid #ccc;
+font-size:16px;
 }
 
 button { background:#2f80ed; color:white; border:none; }
 
 .card {
-    background:white;
-    padding:12px;
-    border-radius:10px;
-    margin-bottom:10px;
-    box-shadow:0 2px 5px rgba(0,0,0,0.1);
+background:white; padding:12px; border-radius:10px;
+margin-bottom:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1);
 }
 
-.price-le { font-size:24px; color:#27ae60; font-weight:bold; }
-.price-si { color:#2980b9; }
-.stock-low { color:orange; }
-.stock-out { color:red; }
+.price { font-size:24px; color:#27ae60; font-weight:bold; }
 
 .nav {
-    position:fixed;
-    bottom:0;
-    width:100%;
-    display:flex;
-    background:white;
-    border-top:1px solid #ccc;
+position:fixed; bottom:0; width:100%;
+display:flex; background:white; border-top:1px solid #ccc;
 }
 
 .nav button { flex:1; background:white; color:#333; }
+
 .hidden { display:none; }
 textarea { height:120px; }
+#reader { margin-top:10px; }
 </style>
 </head>
 <body>
@@ -57,43 +46,45 @@ textarea { height:120px; }
 
 <!-- TRA CỨU -->
 <div id="view-search" class="container">
-    <input type="text" id="searchInput" placeholder="Tìm tên / mã sản phẩm">
-    <div id="result"></div>
+<input type="text" id="searchInput" placeholder="Tìm tên / mã / barcode">
+<button onclick="startScanner()">📷 Quét Barcode</button>
+<div id="reader" class="hidden"></div>
+<div id="result"></div>
 </div>
 
 <!-- DANH SÁCH -->
 <div id="view-products" class="container hidden">
-    <h3>Danh sách sản phẩm</h3>
-    <div id="productList"></div>
+<h3>Danh sách sản phẩm</h3>
+<div id="productList"></div>
 </div>
 
 <!-- IMPORT -->
 <div id="view-import" class="container hidden">
-    <h3>Import Copy - Dán</h3>
-    <p>Định dạng: ma,ten,gia_nhap,gia_ban,ton</p>
-    <textarea id="importData"></textarea>
-    <button onclick="importManual()">Import thủ công</button>
+<h3>Import Copy - Dán</h3>
+<p>Định dạng: ma,ten,barcode,gia_nhap,gia_ban,ton</p>
+<textarea id="importData"></textarea>
+<button onclick="importManual()">Import thủ công</button>
 
-    <hr>
+<hr>
 
-    <h3>Import File KiotViet (.xlsx)</h3>
-    <input type="file" id="fileInput" accept=".xlsx,.xls">
-    <button onclick="handleFile()">Import từ KiotViet</button>
+<h3>Import File KiotViet (.xlsx)</h3>
+<input type="file" id="fileInput" accept=".xlsx,.xls">
+<button onclick="handleFile()">Import từ KiotViet</button>
 </div>
 
 <!-- NHẬP HÀNG -->
 <div id="view-nhap" class="container hidden">
-    <h3>Nhập hàng</h3>
-    <select id="nhapProduct"></select>
-    <input type="number" id="nhapSoLuong" placeholder="Số lượng nhập">
-    <button onclick="nhapHang()">Cập nhật tồn kho</button>
+<h3>Nhập hàng</h3>
+<select id="nhapProduct"></select>
+<input type="number" id="nhapSoLuong" placeholder="Số lượng nhập">
+<button onclick="nhapHang()">Cập nhật tồn kho</button>
 </div>
 
 <div class="nav">
-    <button onclick="showView('search')">Tra cứu</button>
-    <button onclick="showView('products')">Sản phẩm</button>
-    <button onclick="showView('import')">Import</button>
-    <button onclick="showView('nhap')">Nhập</button>
+<button onclick="showView('search')">Tra cứu</button>
+<button onclick="showView('products')">Sản phẩm</button>
+<button onclick="showView('import')">Import</button>
+<button onclick="showView('nhap')">Nhập</button>
 </div>
 
 <script>
@@ -101,169 +92,188 @@ textarea { height:120px; }
 let products = JSON.parse(localStorage.getItem("products")) || [];
 
 function saveData(){
-    localStorage.setItem("products", JSON.stringify(products));
+localStorage.setItem("products", JSON.stringify(products));
 }
 
 function showView(view){
-    document.querySelectorAll(".container").forEach(v=>v.classList.add("hidden"));
-    document.getElementById("view-"+view).classList.remove("hidden");
-    renderProducts();
-    renderSelect();
+document.querySelectorAll(".container").forEach(v=>v.classList.add("hidden"));
+document.getElementById("view-"+view).classList.remove("hidden");
+renderProducts();
+renderSelect();
 }
 
-/* ===================== TRA CỨU ===================== */
+/* ===== TRA CỨU ===== */
 
 document.getElementById("searchInput").addEventListener("input", function(){
-    searchProduct(this.value);
+searchProduct(this.value);
 });
 
 function searchProduct(keyword){
-    const key = keyword.toLowerCase();
-    const result = document.getElementById("result");
-    result.innerHTML = "";
+const key = keyword.toLowerCase();
+const result = document.getElementById("result");
+result.innerHTML="";
 
-    products
-    .filter(p => 
-        p.ma.toLowerCase().includes(key) ||
-        p.ten.toLowerCase().includes(key)
-    )
-    .forEach(p=>{
-        result.innerHTML += `
-        <div class="card">
-            <b>${p.ten}</b><br>
-            Mã: ${p.ma}<br>
-            <div class="price-le">${p.gia_ban.toLocaleString()} đ</div>
-            <div>Giá nhập: ${p.gia_nhap.toLocaleString()} đ</div>
-            <div>Tồn kho: ${p.ton}</div>
-        </div>`;
-    });
+products
+.filter(p =>
+p.ma.toLowerCase().includes(key) ||
+p.ten.toLowerCase().includes(key) ||
+(p.barcode && p.barcode.includes(key))
+)
+.forEach(p=>{
+result.innerHTML+=`
+<div class="card">
+<b>${p.ten}</b><br>
+Mã: ${p.ma}<br>
+<div class="price">${p.gia_ban.toLocaleString()} đ</div>
+Giá nhập: ${p.gia_nhap.toLocaleString()} đ<br>
+Tồn kho: ${p.ton}
+</div>`;
+});
 }
 
-/* ===================== DANH SÁCH ===================== */
+/* ===== DANH SÁCH ===== */
 
 function renderProducts(){
-    const list = document.getElementById("productList");
-    list.innerHTML="";
-    products.forEach(p=>{
-        list.innerHTML += `
-        <div class="card">
-            <b>${p.ten} (${p.ma})</b>
-            <div class="price-le">${p.gia_ban.toLocaleString()} đ</div>
-            <div>Giá nhập: ${p.gia_nhap.toLocaleString()} đ</div>
-            <div>Tồn kho: ${p.ton}</div>
-        </div>`;
-    });
+const list=document.getElementById("productList");
+list.innerHTML="";
+products.forEach(p=>{
+list.innerHTML+=`
+<div class="card">
+<b>${p.ten} (${p.ma})</b>
+<div class="price">${p.gia_ban.toLocaleString()} đ</div>
+Giá nhập: ${p.gia_nhap.toLocaleString()} đ<br>
+Tồn: ${p.ton}
+</div>`;
+});
 }
 
 function renderSelect(){
-    const select = document.getElementById("nhapProduct");
-    select.innerHTML="";
-    products.forEach((p,i)=>{
-        select.innerHTML += `<option value="${i}">${p.ten}</option>`;
-    });
+const select=document.getElementById("nhapProduct");
+select.innerHTML="";
+products.forEach((p,i)=>{
+select.innerHTML+=`<option value="${i}">${p.ten}</option>`;
+});
 }
 
-/* ===================== IMPORT THỦ CÔNG ===================== */
+/* ===== IMPORT THỦ CÔNG ===== */
 
 function importManual(){
-    const data=document.getElementById("importData").value.trim();
-    if(!data) return;
+const data=document.getElementById("importData").value.trim();
+if(!data) return;
+const lines=data.split("\n");
 
-    const lines=data.split("\n");
+lines.forEach(line=>{
+let [ma,ten,barcode,gia_nhap,gia_ban,ton]=line.split(",");
+if(!ma) return;
 
-    lines.forEach(line=>{
-        let [ma,ten,gia_nhap,gia_ban,ton]=line.split(",");
-        if(!ma) return;
+let existing=products.find(p=>p.ma==ma);
 
-        let existing=products.find(p=>p.ma==ma);
+if(existing){
+existing.ten=ten;
+existing.barcode=barcode;
+existing.gia_nhap=Number(gia_nhap);
+existing.gia_ban=Number(gia_ban);
+existing.ton=Number(ton);
+}else{
+products.push({
+ma,ten,barcode,
+gia_nhap:Number(gia_nhap),
+gia_ban:Number(gia_ban),
+ton:Number(ton)
+});
+}
+});
 
-        if(existing){
-            existing.ten=ten;
-            existing.gia_nhap=Number(gia_nhap);
-            existing.gia_ban=Number(gia_ban);
-            existing.ton=Number(ton);
-        } else {
-            products.push({
-                ma,
-                ten,
-                gia_nhap:Number(gia_nhap),
-                gia_ban:Number(gia_ban),
-                ton:Number(ton)
-            });
-        }
-    });
-
-    saveData();
-    alert("Import thủ công thành công!");
+saveData();
+alert("Import thủ công thành công!");
 }
 
-/* ===================== IMPORT KIOTVIET ===================== */
+/* ===== IMPORT KIOTVIET ===== */
 
 function handleFile(){
-    const file = document.getElementById('fileInput').files[0];
-    if(!file){
-        alert("Chọn file trước!");
-        return;
-    }
+const file=document.getElementById('fileInput').files[0];
+if(!file){ alert("Chọn file trước!"); return; }
 
-    const reader = new FileReader();
+const reader=new FileReader();
 
-    reader.onload = function(e){
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, {type:'array'});
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const json = XLSX.utils.sheet_to_json(sheet);
-        importFromKiotViet(json);
-    };
+reader.onload=function(e){
+const data=new Uint8Array(e.target.result);
+const workbook=XLSX.read(data,{type:'array'});
+const sheet=workbook.Sheets[workbook.SheetNames[0]];
+const json=XLSX.utils.sheet_to_json(sheet);
+importFromKiotViet(json);
+};
 
-    reader.readAsArrayBuffer(file);
+reader.readAsArrayBuffer(file);
 }
 
 function importFromKiotViet(data){
 
-    data.forEach(item=>{
+data.forEach(item=>{
 
-        let ma = item["Mã hàng"] || item["Mã sản phẩm"];
-        let ten = item["Tên hàng"] || item["Tên sản phẩm"];
-        let gia_nhap = Number(item["Giá vốn"] || 0);
-        let gia_ban = Number(item["Giá bán"] || 0);
-        let ton = Number(item["Tồn kho"] || 0);
+let ma=item["Mã hàng"]||item["Mã sản phẩm"];
+let ten=item["Tên hàng"]||item["Tên sản phẩm"];
+let gia_nhap=Number(item["Giá vốn"]||0);
+let gia_ban=Number(item["Giá bán"]||0);
+let ton=Number(item["Tồn kho"]||0);
+let barcode=item["Mã vạch"]||"";
 
-        if(!ma) return;
+if(!ma) return;
 
-        let existing = products.find(p => p.ma == ma);
+let existing=products.find(p=>p.ma==ma);
 
-        if(existing){
-            existing.ten = ten;
-            existing.gia_nhap = gia_nhap;
-            existing.gia_ban = gia_ban;
-            existing.ton = ton;
-        } else {
-            products.push({
-                ma,
-                ten,
-                gia_nhap,
-                gia_ban,
-                ton
-            });
-        }
-
-    });
-
-    saveData();
-    alert("Import từ KiotViet thành công!");
+if(existing){
+existing.ten=ten;
+existing.gia_nhap=gia_nhap;
+existing.gia_ban=gia_ban;
+existing.ton=ton;
+existing.barcode=barcode;
+}else{
+products.push({ma,ten,gia_nhap,gia_ban,ton,barcode});
 }
 
-/* ===================== NHẬP HÀNG ===================== */
+});
+
+saveData();
+alert("Import từ KiotViet thành công!");
+}
+
+/* ===== NHẬP HÀNG ===== */
 
 function nhapHang(){
-    const index=document.getElementById("nhapProduct").value;
-    const sl=Number(document.getElementById("nhapSoLuong").value);
-    if(!sl) return;
+const index=document.getElementById("nhapProduct").value;
+const sl=Number(document.getElementById("nhapSoLuong").value);
+if(!sl) return;
+products[index].ton+=sl;
+saveData();
+alert("Đã cập nhật tồn kho!");
+}
 
-    products[index].ton+=sl;
-    saveData();
-    alert("Đã cập nhật tồn kho!");
+/* ===== QUÉT BARCODE CAMERA SAU ===== */
+
+let html5QrCode;
+
+function startScanner(){
+document.getElementById("reader").classList.remove("hidden");
+html5QrCode=new Html5Qrcode("reader");
+
+html5QrCode.start(
+{ facingMode: "environment" },   // LUÔN CAMERA SAU
+{ fps:10, qrbox:250 },
+(decodedText)=>{
+document.getElementById("searchInput").value=decodedText;
+searchProduct(decodedText);
+stopScanner();
+}
+);
+}
+
+function stopScanner(){
+if(html5QrCode){
+html5QrCode.stop().then(()=>{
+document.getElementById("reader").classList.add("hidden");
+});
+}
 }
 
 renderProducts();
