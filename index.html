@@ -7,37 +7,130 @@
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
 
 <style>
-body { font-family: Arial; margin:0; background:#f2f2f2; }
-.header { background:#2f80ed; color:white; padding:15px; text-align:center; font-weight:bold; }
-.container { padding:15px; margin-bottom:90px; }
 
-input, select, button, textarea {
-width:100%; padding:10px; margin:5px 0;
-border-radius:8px; border:1px solid #ccc;
-font-size:16px;
+:root{
+--primary:#1976d2;
+--bg:#f5f7fa;
+--card:#ffffff;
+--text:#1f2937;
+--muted:#6b7280;
+--border:#e5e7eb;
 }
 
-button { background:#2f80ed; color:white; border:none; }
-
-.card {
-background:white; padding:12px; border-radius:10px;
-margin-bottom:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1);
+body{
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
+margin:0;
+background:var(--bg);
+color:var(--text);
 }
 
-.price { font-size:24px; color:#27ae60; font-weight:bold; }
-
-.nav {
-position:fixed; bottom:0; width:100%;
-display:flex; background:white; border-top:1px solid #ccc;
+/* HEADER */
+.header{
+background:var(--primary);
+color:white;
+padding:14px;
+text-align:center;
+font-weight:600;
+font-size:17px;
+box-shadow:0 2px 4px rgba(0,0,0,0.1);
 }
 
-.nav button { flex:1; background:white; color:#333; }
+/* CONTENT */
+.container{
+padding:16px;
+margin-bottom:90px;
+}
 
-.hidden { display:none; }
-textarea { height:120px; }
-#reader { margin-top:10px; }
+/* INPUT */
+input, select, textarea{
+width:100%;
+padding:12px;
+border-radius:8px;
+border:1px solid var(--border);
+font-size:15px;
+margin-bottom:10px;
+}
+
+/* BUTTON */
+button{
+width:100%;
+padding:12px;
+border-radius:8px;
+border:none;
+background:var(--primary);
+color:white;
+font-weight:500;
+cursor:pointer;
+}
+
+/* CARD */
+.card{
+background:var(--card);
+padding:16px;
+border-radius:12px;
+margin-bottom:14px;
+border:1px solid var(--border);
+box-shadow:0 2px 8px rgba(0,0,0,0.04);
+}
+
+.price{
+font-size:22px;
+font-weight:700;
+color:var(--primary);
+margin:6px 0;
+}
+
+.price-si{
+font-size:15px;
+color:#2563eb;
+font-weight:600;
+margin-bottom:6px;
+}
+
+.meta{
+font-size:14px;
+color:var(--muted);
+margin-top:3px;
+}
+
+/* BOTTOM NAV */
+.nav{
+position:fixed;
+bottom:0;
+width:100%;
+display:flex;
+background:white;
+border-top:1px solid var(--border);
+}
+
+.nav-item{
+flex:1;
+text-align:center;
+padding:8px 0;
+font-size:12px;
+color:var(--muted);
+cursor:pointer;
+}
+
+.nav-item svg{
+width:20px;
+height:20px;
+display:block;
+margin:0 auto 4px auto;
+}
+
+.nav-item.active{
+color:var(--primary);
+font-weight:600;
+}
+
+.hidden{ display:none; }
+
+#reader{ margin-top:10px; }
+
 </style>
 </head>
 <body>
@@ -61,8 +154,7 @@ textarea { height:120px; }
 <!-- IMPORT -->
 <div id="view-import" class="container hidden">
 <h3>Import Copy - Dán</h3>
-<p>Định dạng: ma,ten,barcode,gia_nhap,gia_ban,ton</p>
-<textarea id="importData"></textarea>
+<textarea id="importData" placeholder="ma,ten,barcode,gia_nhap,gia_ban,gia_si,ton"></textarea>
 <button onclick="importManual()">Import thủ công</button>
 
 <hr>
@@ -72,7 +164,7 @@ textarea { height:120px; }
 <button onclick="handleFile()">Import từ KiotViet</button>
 </div>
 
-<!-- NHẬP HÀNG -->
+<!-- NHẬP -->
 <div id="view-nhap" class="container hidden">
 <h3>Nhập hàng</h3>
 <select id="nhapProduct"></select>
@@ -80,14 +172,29 @@ textarea { height:120px; }
 <button onclick="nhapHang()">Cập nhật tồn kho</button>
 </div>
 
+<!-- BOTTOM NAV -->
 <div class="nav">
-<button onclick="showView('search')">Tra cứu</button>
-<button onclick="showView('products')">Sản phẩm</button>
-<button onclick="showView('import')">Import</button>
-<button onclick="showView('nhap')">Nhập</button>
+<div class="nav-item active" onclick="showView('search',this)">
+<i data-lucide="search"></i>
+Tra cứu
+</div>
+<div class="nav-item" onclick="showView('products',this)">
+<i data-lucide="box"></i>
+Sản phẩm
+</div>
+<div class="nav-item" onclick="showView('import',this)">
+<i data-lucide="upload"></i>
+Import
+</div>
+<div class="nav-item" onclick="showView('nhap',this)">
+<i data-lucide="plus-circle"></i>
+Nhập
+</div>
 </div>
 
 <script>
+
+lucide.createIcons();
 
 let products = JSON.parse(localStorage.getItem("products")) || [];
 
@@ -95,51 +202,47 @@ function saveData(){
 localStorage.setItem("products", JSON.stringify(products));
 }
 
-function showView(view){
+function showView(view,el){
 document.querySelectorAll(".container").forEach(v=>v.classList.add("hidden"));
 document.getElementById("view-"+view).classList.remove("hidden");
+
+document.querySelectorAll(".nav-item").forEach(i=>i.classList.remove("active"));
+if(el) el.classList.add("active");
+
 renderProducts();
 renderSelect();
 }
 
-/* ===== TRA CỨU ===== */
-
-document.getElementById("searchInput").addEventListener("input", function(){
+/* SEARCH */
+document.getElementById("searchInput").addEventListener("input",function(){
 searchProduct(this.value);
 });
 
 function searchProduct(keyword){
-const key = keyword.toLowerCase();
-const result = document.getElementById("result");
+const key=keyword.toLowerCase();
+const result=document.getElementById("result");
 result.innerHTML="";
 
 products
-.filter(p =>
-p.ma.toLowerCase().includes(key) ||
-p.ten.toLowerCase().includes(key) ||
-(p.barcode && p.barcode.includes(key))
-)
+.filter(p=>p.ma.toLowerCase().includes(key)||
+p.ten.toLowerCase().includes(key)||
+(p.barcode&&p.barcode.includes(key)))
 .forEach(p=>{
 result.innerHTML+=`
 <div class="card">
-<b>${p.ten}</b><br>
-Mã: ${p.ma}<br>
+<b>${p.ten}</b>
+<div class="meta">Mã: ${p.ma}</div>
 
 <div class="price">${p.gia_ban.toLocaleString()} đ</div>
+<div class="price-si">Giá sỉ: ${(p.gia_si||p.gia_ban).toLocaleString()} đ</div>
 
-<div style="color:#2980b9;font-weight:bold">
-Giá sỉ: ${(p.gia_si || p.gia_ban).toLocaleString()} đ
-</div>
-
-Giá nhập: ${p.gia_nhap.toLocaleString()} đ<br>
-Tồn kho: ${p.ton}
+<div class="meta">Giá nhập: ${p.gia_nhap.toLocaleString()} đ</div>
+<div class="meta">Tồn kho: ${p.ton}</div>
 </div>`;
-
 });
 }
 
-/* ===== DANH SÁCH ===== */
-
+/* LIST */
 function renderProducts(){
 const list=document.getElementById("productList");
 list.innerHTML="";
@@ -148,8 +251,9 @@ list.innerHTML+=`
 <div class="card">
 <b>${p.ten} (${p.ma})</b>
 <div class="price">${p.gia_ban.toLocaleString()} đ</div>
-Giá nhập: ${p.gia_nhap.toLocaleString()} đ<br>
-Tồn: ${p.ton}
+<div class="price-si">Giá sỉ: ${(p.gia_si||p.gia_ban).toLocaleString()} đ</div>
+<div class="meta">Giá nhập: ${p.gia_nhap.toLocaleString()} đ</div>
+<div class="meta">Tồn: ${p.ton}</div>
 </div>`;
 });
 }
@@ -162,124 +266,77 @@ select.innerHTML+=`<option value="${i}">${p.ten}</option>`;
 });
 }
 
-/* ===== IMPORT THỦ CÔNG ===== */
-
+/* IMPORT MANUAL */
 function importManual(){
 const data=document.getElementById("importData").value.trim();
 if(!data) return;
-const lines=data.split("\n");
-
-lines.forEach(line=>{
-let [ma,ten,barcode,gia_nhap,gia_ban,ton]=line.split(",");
+data.split("\n").forEach(line=>{
+let [ma,ten,barcode,gia_nhap,gia_ban,gia_si,ton]=line.split(",");
 if(!ma) return;
-
-let existing=products.find(p=>p.ma==ma);
-
-if(existing){
-existing.ten=ten;
-existing.barcode=barcode;
-existing.gia_nhap=Number(gia_nhap);
-existing.gia_ban=Number(gia_ban);
-existing.ton=Number(ton);
-}else{
 products.push({
 ma,ten,barcode,
 gia_nhap:Number(gia_nhap),
 gia_ban:Number(gia_ban),
+gia_si:Number(gia_si)||Number(gia_ban),
 ton:Number(ton)
 });
-}
 });
-
 saveData();
 alert("Import thủ công thành công!");
 }
 
-/* ===== IMPORT KIOTVIET ===== */
-
+/* IMPORT KIOTVIET */
 function handleFile(){
 const file=document.getElementById('fileInput').files[0];
 if(!file){ alert("Chọn file trước!"); return; }
-
 const reader=new FileReader();
-
 reader.onload=function(e){
 const data=new Uint8Array(e.target.result);
 const workbook=XLSX.read(data,{type:'array'});
 const sheet=workbook.Sheets[workbook.SheetNames[0]];
 const json=XLSX.utils.sheet_to_json(sheet);
-importFromKiotViet(json);
+json.forEach(item=>{
+let ma=item["Mã hàng"]||item["Mã sản phẩm"];
+if(!ma) return;
+products.push({
+ma,
+ten:item["Tên hàng"]||"",
+barcode:item["Mã vạch"]||"",
+gia_nhap:Number(item["Giá vốn"]||0),
+gia_ban:Number(item["Giá bán"]||0),
+gia_si:Number(item["Giá sỉ"]||item["Giá bán"]||0),
+ton:Number(item["Tồn kho"]||0)
+});
+});
+saveData();
+alert("Import KiotViet thành công!");
 };
-
 reader.readAsArrayBuffer(file);
 }
 
-function importFromKiotViet(data){
-
-data.forEach(item=>{
-
-let ma=item["Mã hàng"]||item["Mã sản phẩm"];
-let ten=item["Tên hàng"]||item["Tên sản phẩm"];
-let gia_nhap=Number(item["Giá vốn"]||0);
-let gia_ban=Number(item["Giá bán"]||0);
-let gia_si=Number(item["Giá sỉ"]||item["Giá bán"]||0);
-let ton=Number(item["Tồn kho"]||0);
-let barcode=item["Mã vạch"]||"";
-
-if(!ma) return;
-
-let existing=products.find(p=>p.ma==ma);
-
-if(existing){
-existing.ten=ten;
-existing.gia_nhap=gia_nhap;
-existing.gia_ban=gia_ban;
-existing.gia_si=gia_si || existing.gia_si || gia_ban;
-existing.ton=ton;
-existing.barcode=barcode;
-}else{
-products.push({
-ma,
-ten,
-gia_nhap,
-gia_ban,
-gia_si,
-ton,
-barcode
-});
-}
-
-});
-
+/* NHẬP */
+function nhapHang(){
+const index=document.getElementById("nhapProduct").value;
+const sl=Number(document.getElementById("nhapSoLuong").value);
+if(!sl) return;
+products[index].ton+=sl;
 saveData();
-alert("Import từ KiotViet thành công!");
+alert("Đã cập nhật tồn kho!");
 }
 
-/* ===== QUÉT BARCODE CAMERA SAU ===== */
-
+/* BARCODE */
 let html5QrCode;
-
 function startScanner(){
 document.getElementById("reader").classList.remove("hidden");
 html5QrCode=new Html5Qrcode("reader");
-
 html5QrCode.start(
-{ facingMode: "environment" },   // LUÔN CAMERA SAU
+{ facingMode:"environment" },
 { fps:10, qrbox:250 },
 (decodedText)=>{
 document.getElementById("searchInput").value=decodedText;
 searchProduct(decodedText);
-stopScanner();
-}
-);
-}
-
-function stopScanner(){
-if(html5QrCode){
-html5QrCode.stop().then(()=>{
-document.getElementById("reader").classList.add("hidden");
+html5QrCode.stop();
 });
-}
 }
 
 renderProducts();
