@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản Lý Giá Hàng</title>
+<style>
+body { font-family: Arial; margin:0; background:#f2f2f2; }
+.header { background:#2f80ed; color:white; padding:15px; text-align:center; font-weight:bold; }
+.container { padding:15px; margin-bottom:70px; }
+input, select, button {
+    width:100%; padding:10px; margin:5px 0;
+    border-radius:8px; border:1px solid #ccc;
+}
+button { background:#2f80ed; color:white; border:none; }
+.card {
+    background:white; padding:12px; border-radius:10px;
+    margin-bottom:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1);
+}
+.price-le { font-size:26px; color:#27ae60; font-weight:bold; }
+.price-si { color:#2980b9; }
+.stock-low { color:orange; }
+.stock-out { color:red; }
+.nav {
+    position:fixed; bottom:0; width:100%;
+    display:flex; background:white; border-top:1px solid #ccc;
+}
+.nav button {
+    flex:1; padding:10px; background:white; color:#333;
+}
+.hidden { display:none; }
+textarea { width:100%; height:120px; }
+</style>
+</head>
+<body>
+
+<div class="header">Quản Lý Giá Hàng</div>
+
+<div id="view-search" class="container">
+    <input type="text" id="searchInput" placeholder="Tìm tên / mã sản phẩm">
+    <div id="result"></div>
+</div>
+
+<div id="view-products" class="container hidden">
+    <h3>Danh sách sản phẩm</h3>
+    <div id="productList"></div>
+</div>
+
+<div id="view-import" class="container hidden">
+    <h3>Import (Copy - Dán)</h3>
+    <p>Định dạng: ma,ten,gia_le,gia_si,ton</p>
+    <textarea id="importData"></textarea>
+    <button onclick="importProducts()">Import</button>
+</div>
+
+<div id="view-nhap" class="container hidden">
+    <h3>Nhập hàng</h3>
+    <select id="nhapProduct"></select>
+    <input type="number" id="nhapSoLuong" placeholder="Số lượng nhập">
+    <button onclick="nhapHang()">Cập nhật tồn kho</button>
+</div>
+
+<div class="nav">
+    <button onclick="showView('search')">Giá</button>
+    <button onclick="showView('products')">Sản phẩm</button>
+    <button onclick="showView('import')">Import</button>
+    <button onclick="showView('nhap')">Nhập</button>
+</div>
+
+<script>
+let products = [
+{ma:"SP001", ten:"Sữa Vinamilk 1L", gia_le:22000, gia_si:20000, ton:120},
+{ma:"SP002", ten:"Sữa Vinamilk 180ml", gia_le:7000, gia_si:6500, ton:8},
+{ma:"SP003", ten:"Coca 330ml", gia_le:10000, gia_si:9000, ton:0}
+];
+
+function showView(view){
+document.querySelectorAll(".container").forEach(v=>v.classList.add("hidden"));
+document.getElementById("view-"+view).classList.remove("hidden");
+renderProducts();
+renderSelect();
+}
+
+function renderProducts(){
+const list = document.getElementById("productList");
+list.innerHTML="";
+products.forEach(p=>{
+let stockClass="";
+if(p.ton==0) stockClass="stock-out";
+else if(p.ton<10) stockClass="stock-low";
+list.innerHTML+=`
+<div class="card">
+<b>${p.ten} (${p.ma})</b>
+<div class="price-le">${p.gia_le.toLocaleString()}đ</div>
+<div class="price-si">Giá sỉ: ${p.gia_si.toLocaleString()}đ</div>
+<div class="${stockClass}">Tồn: ${p.ton}</div>
+</div>`;
+});
+}
+
+function renderSelect(){
+const select = document.getElementById("nhapProduct");
+select.innerHTML="";
+products.forEach((p,i)=>{
+select.innerHTML+=`<option value="${i}">${p.ten}</option>`;
+});
+}
+
+document.getElementById("searchInput").addEventListener("input",function(){
+const key=this.value.toLowerCase();
+const result=document.getElementById("result");
+result.innerHTML="";
+products.filter(p=>p.ten.toLowerCase().includes(key)||p.ma.toLowerCase().includes(key))
+.forEach(p=>{
+result.innerHTML+=`
+<div class="card">
+<b>${p.ten}</b>
+<div class="price-le">${p.gia_le.toLocaleString()}đ</div>
+<div class="price-si">Sỉ: ${p.gia_si.toLocaleString()}đ</div>
+<div>Tồn: ${p.ton}</div>
+</div>`;
+});
+});
+
+function importProducts(){
+const data=document.getElementById("importData").value.trim();
+if(!data) return;
+const lines=data.split("\n");
+lines.forEach(line=>{
+let [ma,ten,gia_le,gia_si,ton]=line.split(",");
+let existing=products.find(p=>p.ma==ma);
+if(existing){
+existing.ten=ten;
+existing.gia_le=Number(gia_le);
+existing.gia_si=Number(gia_si);
+existing.ton=Number(ton);
+}else{
+products.push({
+ma,ten,
+gia_le:Number(gia_le),
+gia_si:Number(gia_si),
+ton:Number(ton)
+});
+}
+});
+alert("Import thành công!");
+renderProducts();
+renderSelect();
+}
+
+function nhapHang(){
+const index=document.getElementById("nhapProduct").value;
+const sl=Number(document.getElementById("nhapSoLuong").value);
+if(!sl) return;
+products[index].ton+=sl;
+alert("Đã cập nhật tồn kho!");
+renderProducts();
+}
+
+renderProducts();
+renderSelect();
+</script>
+
+</body>
+</html>
