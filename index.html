@@ -124,10 +124,17 @@ result.innerHTML+=`
 <div class="card">
 <b>${p.ten}</b><br>
 Mã: ${p.ma}<br>
+
 <div class="price">${p.gia_ban.toLocaleString()} đ</div>
+
+<div style="color:#2980b9;font-weight:bold">
+Giá sỉ: ${(p.gia_si || p.gia_ban).toLocaleString()} đ
+</div>
+
 Giá nhập: ${p.gia_nhap.toLocaleString()} đ<br>
 Tồn kho: ${p.ton}
 </div>`;
+
 });
 }
 
@@ -215,6 +222,7 @@ let ma=item["Mã hàng"]||item["Mã sản phẩm"];
 let ten=item["Tên hàng"]||item["Tên sản phẩm"];
 let gia_nhap=Number(item["Giá vốn"]||0);
 let gia_ban=Number(item["Giá bán"]||0);
+let gia_si=Number(item["Giá sỉ"]||item["Giá bán"]||0);
 let ton=Number(item["Tồn kho"]||0);
 let barcode=item["Mã vạch"]||"";
 
@@ -226,27 +234,25 @@ if(existing){
 existing.ten=ten;
 existing.gia_nhap=gia_nhap;
 existing.gia_ban=gia_ban;
+existing.gia_si=gia_si || existing.gia_si || gia_ban;
 existing.ton=ton;
 existing.barcode=barcode;
 }else{
-products.push({ma,ten,gia_nhap,gia_ban,ton,barcode});
+products.push({
+ma,
+ten,
+gia_nhap,
+gia_ban,
+gia_si,
+ton,
+barcode
+});
 }
 
 });
 
 saveData();
 alert("Import từ KiotViet thành công!");
-}
-
-/* ===== NHẬP HÀNG ===== */
-
-function nhapHang(){
-const index=document.getElementById("nhapProduct").value;
-const sl=Number(document.getElementById("nhapSoLuong").value);
-if(!sl) return;
-products[index].ton+=sl;
-saveData();
-alert("Đã cập nhật tồn kho!");
 }
 
 /* ===== QUÉT BARCODE CAMERA SAU ===== */
